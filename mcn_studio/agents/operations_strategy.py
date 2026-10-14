@@ -48,7 +48,7 @@ class OperationsStrategyAgent(BaseAgent):
             agent_name=self.config.name,
             task_id=input_data.get("task_id", ""),
             output_type="analysis",
-            content=response["output"],
+            content=self.llm_enhance(input_data, response["output"]),
             confidence=response["confidence"],
             metadata={
                 "reasoning": response["reasoning"],

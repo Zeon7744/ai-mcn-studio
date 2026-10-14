@@ -13,7 +13,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from core.models import create_all_agents, AgentRole, AgentLevel
 from agents.orchestrator import OrchestratorAgent
 from core.regulations import WORKFLOW_DEFINITIONS, PROJECT_TEMPLATES
-from knowledge import make_hot_report, hot_report_next_step, check_ai_content_labeling, build_matrix_board, matrix_next_step
+from knowledge import make_hot_report, hot_report_next_step, check_ai_content_labeling, build_matrix_board, matrix_next_step, team_efficiency, project_board_view
 from knowledge import (
     search_platform_info, get_best_posting_time, get_title_suggestions,
     check_compliance, get_compliance_guide, quick_compliance_scan,
@@ -155,6 +155,24 @@ def main():
     ok = _check('矩阵优化建议', ms.get('owner')=='data_analyst')
     all_ok &= ok
 
+    # 14. 团队效能看板
+    from knowledge import team_efficiency, project_board_view
+    tb = team_efficiency(agents)
+    ok = _check('团队效能看板', tb.get('total')==24 and tb.get('health') in ('healthy','watch','at_risk'), str(tb.get('health')))
+    all_ok &= ok
+
+    # 15. 项目看板（无阻塞）
+    from core.models import Project, Task, TaskStatus
+    pr = Project(name='测试项目'); pr.tasks=[Task(title='a', status=TaskStatus.DONE), Task(title='b', status=TaskStatus.BLOCKED)]
+    pb = project_board_view([pr])
+    ok = _check('项目看板阻塞项识别', len(pb.get('blocked_tasks',[]))==1, str(pb.get('blocked_tasks')))
+    all_ok &= ok
+
+    # 16. 总监层Agent也具备LLM增强能力
+    cd = orch.get_agent_by_role(AgentRole('creative_director'))
+    has = hasattr(cd, 'llm_enhance')
+    ok = _check('总监Agent具备llm_enhance', has)
+    all_ok &= ok
     # 13. LLM适配层降级可用
     from agents.llm_adapter import get_llm_client, think_with_llm
     client = get_llm_client()

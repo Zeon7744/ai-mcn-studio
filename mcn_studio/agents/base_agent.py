@@ -105,6 +105,12 @@ class BaseAgent(ABC):
         recent = self.context.memory[-5:]
         return "\n".join(f"[{m.get('time', '')[:16]}] {m.get('content', '')}" for m in recent)
 
+        """
+        核心思考方法 - 每个Agent根据自己的专业领域和人格特质处理输入。
+        这是Agent"有思想"的关键。
+        """
+        pass
+
     @abstractmethod
     def think(self, input_data: dict[str, Any]) -> AgentOutput:
         """
@@ -112,6 +118,18 @@ class BaseAgent(ABC):
         这是Agent"有思想"的关键。
         """
         pass
+
+    def llm_enhance(self, input_data: dict[str, Any], fallback_text: str,
+                    temperature: float = 0.4) -> str:
+        """
+        统一 LLM 增强入口：任意 Agent（总监/CEO/专员）调用此方法即可在
+        内置模板思维之上叠加真实 LLM（若已配置 KEY）；未配置时原样返回内置产出。
+        """
+        try:
+            from agents.llm_adapter import think_with_llm
+            return think_with_llm(self.config, input_data, fallback_text, temperature)
+        except Exception:
+            return fallback_text
 
     def __repr__(self) -> str:
         return f"<Agent: {self.config.name} ({self.config.role.value})>"

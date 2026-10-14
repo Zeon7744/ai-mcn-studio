@@ -38,6 +38,7 @@ from knowledge.compliance_checklist import (
 from knowledge.hot_report import build_hot_topic_report, next_suggestion
 from knowledge.ai_labeling import check_ai_labeling, AI_LABELING_RULES
 from knowledge.matrix_dashboard import build_matrix_dashboard, next_optimization
+from knowledge.team_board import team_efficiency_report, project_board
 
 
 def get_platform_checklist(platform: str) -> dict:
@@ -187,3 +188,13 @@ def build_matrix_board(accounts, platform="douyin"):
 def matrix_next_step(dashboard):
     """矩阵看板下一步优化动作（供总调度分派）"""
     return next_optimization(dashboard)
+
+
+def team_efficiency(agents):
+    """团队效能看板（CEO视角）"""
+    return team_efficiency_report(agents)
+
+
+def project_board_view(projects):
+    """跨项目进度看板（CEO视角）"""
+    return project_board(projects)

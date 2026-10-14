@@ -42,7 +42,7 @@ class CreativeDirectorAgent(BaseAgent):
             agent_name=self.config.name,
             task_id=input_data.get("task_id", ""),
             output_type="content",
-            content=creative_reasoning["output"],
+            content=self.llm_enhance(input_data, creative_reasoning["output"]),
             confidence=creative_reasoning["confidence"],
             metadata={
                 "reasoning": creative_reasoning["reasoning"],

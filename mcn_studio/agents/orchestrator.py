@@ -409,8 +409,10 @@ class OrchestratorAgent(BaseAgent):
     # ── 状态检查 ─────────────────────────────────────────────────────
 
     def _status_check(self, input_data):
-        """团队与项目状态检查（全员视图）"""
-        reasoning = "【总调度状态检查】\n\n"
+        """团队与项目状态检查（全员视图，含团队效能看板）"""
+        from knowledge import team_efficiency
+        efficiency_board = team_efficiency(self.all_agents)
+        reasoning = "【总调度状态检查】\n\n" + efficiency_board["report_text"] + "\n\n"
 
         # Agent状态（按部门分组）
         reasoning += "👥 团队成员状态（按部门）：\n"
@@ -456,6 +458,7 @@ class OrchestratorAgent(BaseAgent):
             f"{len(self.agent_instances) + 1} 人\n"
             f"请告诉我你需要什么帮助。"
         )
+        reasoning = self.llm_enhance(input_data, reasoning, temperature=0.3)
         return {"success": True, "output": reasoning, "confidence": 0.95, "reasoning": reasoning}
 
     # ── 任务模板生成 ─────────────────────────────────────────────────

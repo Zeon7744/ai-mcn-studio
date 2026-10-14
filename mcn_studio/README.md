@@ -23,12 +23,13 @@ mcn_studio/
 │   ├── specialists.py       # 15名专员（批量注册：文渊/疾风/丹青/帧刻/慧眼/
 │   │                        #   暖暖/星轨/知微/燃点/鸿鹄/甄宝/守法/版权/瞭望/鉴往）
 │   └── orchestrator.py      # 令仪 - 总调度/CEO（分级管理+双模调度）
-│   ├── llm_adapter.py       # LLM适配层（OpenAI兼容，可接真实大模型，离线自动降级内置思维）
+│   ├── llm_adapter.py       # LLM适配层（OpenAI兼容；24名员工[总监/CEO/专员]统一支持，离线自动降级内置思维）
 ├── knowledge/               # 知识库
 │   ├── compliance_checklist.py # 7平台红线清单+广告法高危词（发布前合规依据）
 │   ├── hot_report.py           # 热点速报生成器（瞭望+疾风联合输出，3h响应SLA）
 │   ├── ai_labeling.py          # AI内容标注合规（6平台深度合成标注要求）
 │   ├── matrix_dashboard.py     # 矩阵数据看板（多账号效率对比+资源调优）
+│   ├── team_board.py           # 团队效能看板+跨项目进度看板（CEO视角）
 │   ├── platform_algorithms.py  # 6大平台算法详解
 │   ├── content_formulas.py     # 7种钩子+5种结构+7种标题公式
 │   ├── script_templates.py     # 11种脚本模板
