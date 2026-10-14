@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+*.pyo
+demo_run.log
+_patch_*.py
