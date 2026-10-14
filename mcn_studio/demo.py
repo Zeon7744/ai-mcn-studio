@@ -241,6 +241,21 @@ def demo():
     })
     print(result.content)
 
+    # ── 热点速报演示（研究中心·瞭望+疾风） ──────────────────────
+    _section("第九部分：热点速报（研究中心·瞭望+疾风 联合输出）")
+    from knowledge import make_hot_report, hot_report_next_step
+    sample=[
+        {"title": "某头部品牌虚假宣传被曝光", "category": "产品翻车", "heat": 92},
+        {"title": "AI 生成视频新规生效", "category": "政策新规", "heat": 78},
+        {"title": "城市夜经济出圈", "category": "社会议题", "heat": 65},
+    ]
+    report = make_hot_report(sample, "douyin", top_n=3)
+    print(report["report_text"])
+    nxt = hot_report_next_step(report)
+    print()
+    print("  下一步：" + nxt["suggestion"])
+    print("  负责人：" + nxt["owner"] + "  SLA：" + str(nxt["sla_hours"]) + "h")
+    print("  后续链路：" + " → ".join(nxt["follow_up_roles"]))
     # ── 总结 ───────────────────────────────────────────────────────
     print("\n" + "═" * 60)
     print("  ✅ 演示完成！AI MCN Studio v3.0 已就绪。")

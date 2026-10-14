@@ -35,6 +35,8 @@ from knowledge.compliance_checklist import (
     get_checklist,
     scan_text,
 )
+from knowledge.hot_report import build_hot_topic_report, next_suggestion
+
 
 def get_platform_checklist(platform: str) -> dict:
     """获取平台红线清单（发布前合规审查依据）"""
@@ -158,3 +160,13 @@ def get_compliance_guide(platform: str) -> dict:
             "wechat_video": "社交链传播，负面内容扩散快",
         }.get(platform, ""),
     }
+
+
+def make_hot_report(raw_topics, platform="douyin", top_n=5):
+    """生成结构化热点速报（研究中心·瞭望+疾风）"""
+    return build_hot_topic_report(raw_topics, platform, top_n)
+
+
+def hot_report_next_step(report):
+    """热点速报下一步建议（供总调度分派）"""
+    return next_suggestion(report)

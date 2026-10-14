@@ -25,6 +25,7 @@ mcn_studio/
 │   └── orchestrator.py      # 令仪 - 总调度/CEO（分级管理+双模调度）
 ├── knowledge/               # 知识库
 │   ├── compliance_checklist.py # 7平台红线清单+广告法高危词（发布前合规依据）
+│   ├── hot_report.py           # 热点速报生成器（瞭望+疾风联合输出，3h响应SLA）
 │   ├── platform_algorithms.py  # 6大平台算法详解
 │   ├── content_formulas.py     # 7种钩子+5种结构+7种标题公式
 │   ├── script_templates.py     # 11种脚本模板
@@ -36,7 +37,7 @@ mcn_studio/
 │   ├── SOP索引.md             # 管理制度库（SOP与工作流对应索引）
 │   └── 部门岗位与职级手册.md   # 24岗位职责/KPI/升级路径
 ├── tests/
-│   └── test_full_coverage.py  # 全量自动化验证（24Agent+12工作流+知识库）
+│   └── test_full_coverage.py  # 全量自动化验证（24Agent+12工作流+知识库+合规+热点速报，22项检查）
 ├── demo.py                  # 完整功能演示（v3.0）
 ├── main.py                  # 交互模式入口（扩展命令）
 └── README.md

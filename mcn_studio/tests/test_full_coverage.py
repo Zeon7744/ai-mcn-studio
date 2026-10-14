@@ -13,6 +13,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from core.models import create_all_agents, AgentRole, AgentLevel
 from agents.orchestrator import OrchestratorAgent
 from core.regulations import WORKFLOW_DEFINITIONS, PROJECT_TEMPLATES
+from knowledge import make_hot_report, hot_report_next_step
 from knowledge import (
     search_platform_info, get_best_posting_time, get_title_suggestions,
     check_compliance, get_compliance_guide, quick_compliance_scan,
@@ -139,6 +140,14 @@ def main():
                 and len({**FAILURE_CASES, **EXTRA_FAILURE_CASES}) >= 8)
     all_ok &= ok
 
+    # 10. 热点速报
+    hr = make_hot_report([{"title": "测试热点", "category": "产品翻车", "heat": 80}],
+                        "douyin", top_n=2)
+    ok = _check("热点速报生成", bool(hr.get("report_text")) and len(hr.get("top_topics", [])) >= 1)
+    all_ok &= ok
+    hs = hot_report_next_step(hr)
+    ok = _check("热点下一步建议", hs.get("owner") == "hottracker", str(hs))
+    all_ok &= ok
     print("=" * 60)
     print(f"结果：{'全部通过 ✔' if all_ok else '存在失败项 ✘'}")
     print("=" * 60)
