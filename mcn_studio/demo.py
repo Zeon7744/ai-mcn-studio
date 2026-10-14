@@ -233,7 +233,7 @@ def demo():
     print(result.content)
 
     # ── 第九部分：总调度状态检查 ─────────────────────────────────
-    _section("第九部分：总调度（令仪·CEO）状态检查")
+    _section("第十部分：总调度（令仪·CEO）状态检查")
     result = orchestrator.think({
         "action": "status_check",
         "context": {},
@@ -242,7 +242,7 @@ def demo():
     print(result.content)
 
     # ── 热点速报演示（研究中心·瞭望+疾风） ──────────────────────
-    _section("第九部分：热点速报（研究中心·瞭望+疾风 联合输出）")
+    _section("第十一部分：热点速报（研究中心·瞭望+疾风 联合输出）")
     from knowledge import make_hot_report, hot_report_next_step
     sample=[
         {"title": "某头部品牌虚假宣传被曝光", "category": "产品翻车", "heat": 92},
@@ -256,6 +256,35 @@ def demo():
     print("  下一步：" + nxt["suggestion"])
     print("  负责人：" + nxt["owner"] + "  SLA：" + str(nxt["sla_hours"]) + "h")
     print("  后续链路：" + " → ".join(nxt["follow_up_roles"]))
+    # ── 新模块演示：AI标注 + 矩阵看板 + LLM适配层 ─────────────
+    _section("第十二部分：本轮新增模块演示（AI标注/矩阵看板/LLM适配层）")
+    from knowledge import check_ai_content_labeling, build_matrix_board, matrix_next_step
+    from agents.llm_adapter import get_llm_client
+
+    ai_res = check_ai_content_labeling("douyin", is_ai_generated=True, ai_disclosed=False)
+    print("  AI内容标注核验（抖音，AI生成未标注）：")
+    print("     合规：" + str(ai_res["compliant"]) + "  缺口：" + ai_res["gap"])
+    print("     补救：" + ai_res["action"])
+    print()
+
+    board = build_matrix_board([
+        {"name": "主账号", "followers": 520000, "avg_views": 95000,
+         "engagement_rate": 5.1, "conversion_rate": 2.8, "gmv": 150000},
+        {"name": "新账号", "followers": 60000, "avg_views": 8000,
+         "engagement_rate": 1.5, "conversion_rate": 0.6, "gmv": 5000},
+    ])
+    print("  矩阵数据看板：")
+    print(board["dashboard_text"])
+    print("  下一步：" + matrix_next_step(board)["suggestion"])
+    print()
+
+    llm = get_llm_client()
+    if llm.available:
+        print("  LLM 适配层：已配置KEY（可接真实大模型）")
+    else:
+        print("  LLM 适配层：未配置KEY（自动使用内置模板思维，联网后可无缝升级）")
+    print("     目标模型：" + llm.model)
+
     # ── 总结 ───────────────────────────────────────────────────────
     print("\n" + "═" * 60)
     print("  ✅ 演示完成！AI MCN Studio v3.0 已就绪。")

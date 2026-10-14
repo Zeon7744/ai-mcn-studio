@@ -57,6 +57,12 @@ def _make_agent(role: AgentRole, agent_id: str, agent_name: str,
                 response = self._default(task_title, platform, context)
 
             content = response.get("output", "")
+            # 可选：接入真实 LLM（未配置 KEY 时自动回退内置产出）
+            try:
+                from agents.llm_adapter import think_with_llm
+                content = think_with_llm(self.config, input_data, content)
+            except Exception:
+                pass
             confidence = response.get("confidence", 0.85)
             reasoning = response.get("reasoning", "")
             suggestions = response.get("suggestions", [])

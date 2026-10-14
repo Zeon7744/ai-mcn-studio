@@ -13,7 +13,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from core.models import create_all_agents, AgentRole, AgentLevel
 from agents.orchestrator import OrchestratorAgent
 from core.regulations import WORKFLOW_DEFINITIONS, PROJECT_TEMPLATES
-from knowledge import make_hot_report, hot_report_next_step
+from knowledge import make_hot_report, hot_report_next_step, check_ai_content_labeling, build_matrix_board, matrix_next_step
 from knowledge import (
     search_platform_info, get_best_posting_time, get_title_suggestions,
     check_compliance, get_compliance_guide, quick_compliance_scan,
@@ -140,6 +140,27 @@ def main():
                 and len({**FAILURE_CASES, **EXTRA_FAILURE_CASES}) >= 8)
     all_ok &= ok
 
+    # 11. AI内容标注核验
+    ai_bad = _check('AI标注未披露=不合规', not check_ai_content_labeling('douyin', True, False)['compliant'])
+    all_ok &= ai_bad
+    ai_ok = _check('AI标注已披露=合规', check_ai_content_labeling('youtube', True, True)['compliant'])
+    all_ok &= ai_ok
+
+    # 12. 矩阵看板
+    mb = build_matrix_board([{'name':'X','followers':100000,'avg_views':20000,'engagement_rate':4.0,'conversion_rate':2.0,'gmv':50000},
+                             {'name':'Y','followers':1000,'avg_views':500,'engagement_rate':0.8,'conversion_rate':0.1,'gmv':0}])
+    ok = _check('矩阵看板生成+健康度', bool(mb.get('dashboard_text')) and mb.get('health') in ('healthy','needs_work'), str(mb.get('health')))
+    all_ok &= ok
+    ms = matrix_next_step(mb)
+    ok = _check('矩阵优化建议', ms.get('owner')=='data_analyst')
+    all_ok &= ok
+
+    # 13. LLM适配层降级可用
+    from agents.llm_adapter import get_llm_client, think_with_llm
+    client = get_llm_client()
+    fallback = think_with_llm(agents[1], {'title':'测试','task_type':'数据','platform':'douyin','context':{}}, '内置兜底文本')
+    ok = _check('LLM适配层降级可用', isinstance(fallback, str) and len(fallback)>0, f'LLM可用:{client.available}')
+    all_ok &= ok
     # 10. 热点速报
     hr = make_hot_report([{"title": "测试热点", "category": "产品翻车", "heat": 80}],
                         "douyin", top_n=2)

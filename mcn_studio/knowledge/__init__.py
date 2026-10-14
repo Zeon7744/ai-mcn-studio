@@ -36,6 +36,8 @@ from knowledge.compliance_checklist import (
     scan_text,
 )
 from knowledge.hot_report import build_hot_topic_report, next_suggestion
+from knowledge.ai_labeling import check_ai_labeling, AI_LABELING_RULES
+from knowledge.matrix_dashboard import build_matrix_dashboard, next_optimization
 
 
 def get_platform_checklist(platform: str) -> dict:
@@ -170,3 +172,18 @@ def make_hot_report(raw_topics, platform="douyin", top_n=5):
 def hot_report_next_step(report):
     """热点速报下一步建议（供总调度分派）"""
     return next_suggestion(report)
+
+
+def check_ai_content_labeling(platform="douyin", is_ai_generated=True, ai_disclosed=False):
+    """AI内容标注合规核验（发布前，供守法调用）"""
+    return check_ai_labeling(platform, is_ai_generated, ai_disclosed)
+
+
+def build_matrix_board(accounts, platform="douyin"):
+    """矩阵数据看板（运营中心·慧眼+鉴往）"""
+    return build_matrix_dashboard(accounts)
+
+
+def matrix_next_step(dashboard):
+    """矩阵看板下一步优化动作（供总调度分派）"""
+    return next_optimization(dashboard)
