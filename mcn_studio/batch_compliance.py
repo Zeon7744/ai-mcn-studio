@@ -62,8 +62,8 @@ def _scan_compliance(title: str, platform: str = "douyin") -> List[str]:
         # 复用既有 compliance_checklist 的 scan_text（如可用）
         from mcn_studio.knowledge.compliance_checklist import scan_text
         res = scan_text(text, platform=platform)
-        for v in (res.get('violations') or res.get('issues') or []):
-            issues.append(str(v))
+        for v in (res.get('hits') or []):
+            issues.append(f"命中违规词『{v.get('word','')}』：{v.get('reason','')}")
     except Exception:
         # 内置兜底词扫描
         for w in _FORBIDDEN_TITLE_WORDS:

@@ -7,38 +7,73 @@ AI MCN Studio - 知识索引与检索API
 import sys
 import os
 
-# 确保同目录可导入
-sys.path.insert(0, os.path.dirname(__file__))
+# 确保同目录可导入（兼容直接运行 mcn_studio/demo.py 等场景）
+_repo_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+if _repo_root not in sys.path:
+    sys.path.insert(0, _repo_root)
 
-from knowledge.platform_algorithms import (
-    PLATFORM_ALGORITHMS,
-    PLATFORM_ALGORITHMS_EXTENDED,
-    PLATFORM_COMPARISON,
-    MULTI_PLATFORM_STRATEGY,
-)
-from knowledge.content_formulas import (
-    CONTENT_FORMULAS,
-    TRENDING_CONTENT,
-)
-from knowledge.script_templates import (
-    SCRIPT_TEMPLATES,
-    TITLE_GENERATOR_GUIDE,
-)
-from knowledge.industry_trends import (
-    INDUSTRY_TRENDS,
-    COMPLIANCE_RED_LINES,
-    AD_LAW_KEYWORDS,
-)
-from knowledge.compliance_checklist import (
-    PLATFORM_COMPLIANCE_CHECKLISTS,
-    ADLAW_FORBIDDEN_WORDS,
-    get_checklist,
-    scan_text,
-)
-from knowledge.hot_report import build_hot_topic_report, next_suggestion
-from knowledge.ai_labeling import check_ai_labeling, AI_LABELING_RULES
-from knowledge.matrix_dashboard import build_matrix_dashboard, next_optimization
-from knowledge.team_board import team_efficiency_report, project_board
+# 优先用相对导入（包模式），兜底用绝对路径（脚本模式）
+try:
+    from .platform_algorithms import (
+        PLATFORM_ALGORITHMS,
+        PLATFORM_ALGORITHMS_EXTENDED,
+        PLATFORM_COMPARISON,
+        MULTI_PLATFORM_STRATEGY,
+    )
+    from .content_formulas import (
+        CONTENT_FORMULAS,
+        TRENDING_CONTENT,
+    )
+    from .script_templates import (
+        SCRIPT_TEMPLATES,
+        TITLE_GENERATOR_GUIDE,
+    )
+    from .industry_trends import (
+        INDUSTRY_TRENDS,
+        COMPLIANCE_RED_LINES,
+        AD_LAW_KEYWORDS,
+    )
+    from .compliance_checklist import (
+        PLATFORM_COMPLIANCE_CHECKLISTS,
+        ADLAW_FORBIDDEN_WORDS,
+        get_checklist,
+        scan_text,
+    )
+    from .hot_report import build_hot_topic_report, next_suggestion
+    from .ai_labeling import check_ai_labeling, AI_LABELING_RULES
+    from .matrix_dashboard import build_matrix_dashboard, next_optimization
+    from .team_board import team_efficiency_report, project_board
+except ImportError:
+    # 兜底：脚本模式下（mcn_studio/ 在 sys.path 中）的绝对导入
+    from knowledge.platform_algorithms import (
+        PLATFORM_ALGORITHMS,
+        PLATFORM_ALGORITHMS_EXTENDED,
+        PLATFORM_COMPARISON,
+        MULTI_PLATFORM_STRATEGY,
+    )
+    from knowledge.content_formulas import (
+        CONTENT_FORMULAS,
+        TRENDING_CONTENT,
+    )
+    from knowledge.script_templates import (
+        SCRIPT_TEMPLATES,
+        TITLE_GENERATOR_GUIDE,
+    )
+    from knowledge.industry_trends import (
+        INDUSTRY_TRENDS,
+        COMPLIANCE_RED_LINES,
+        AD_LAW_KEYWORDS,
+    )
+    from knowledge.compliance_checklist import (
+        PLATFORM_COMPLIANCE_CHECKLISTS,
+        ADLAW_FORBIDDEN_WORDS,
+        get_checklist,
+        scan_text,
+    )
+    from knowledge.hot_report import build_hot_topic_report, next_suggestion
+    from knowledge.ai_labeling import check_ai_labeling, AI_LABELING_RULES
+    from knowledge.matrix_dashboard import build_matrix_dashboard, next_optimization
+    from knowledge.team_board import team_efficiency_report, project_board
 
 
 def get_platform_checklist(platform: str) -> dict:

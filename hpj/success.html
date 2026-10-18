@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>支付成功 - ai-mcn-studio</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#1a1a2e;display:flex;align-items:center;justify-content:center;min-height:100vh}
+    .card{background:#fff;border-radius:20px;box-shadow:0 8px 32px rgba(0,0,0,.18);padding:48px;max-width:440px;width:92%;text-align:center}
+    .icon{font-size:64px;margin-bottom:16px}
+    h1{font-size:24px;margin-bottom:8px;color:#667eea}
+    .sub{color:#64748b;font-size:14px;margin-bottom:28px}
+    .row{display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid #f1f5f9;font-size:14px}
+    .row:last-child{border-bottom:none}
+    .label{color:#94a3b8}
+    .val{font-weight:600;color:#1e293b}
+    .btn{display:inline-block;margin-top:28px;padding:14px 36px;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border-radius:12px;text-decoration:none;font-weight:600;font-size:15px;transition:transform .2s,box-shadow .2s}
+    .btn:hover{transform:translateY(-2px);box-shadow:0 4px 16px rgba(102,126,234,.4)}
+    .hint{margin-top:16px;font-size:12px;color:#94a3b8}
+    .features{margin-top:24px;text-align:left;font-size:13px;color:#475569;line-height:1.8}
+    .features li{margin-left:16px}
+  </style>
+</head>
+<body>
+ <div class="card">
+  <div class="icon">🎉</div>
+  <h1>支付成功！Pro 权益已开通</h1>
+  <p class="sub">AI MCN Studio — 无限批量生产 + 合规自检</p>
+  <div class="row"><span class="label">订单号</span><span class="val" id="oid">—</span></div>
+  <div class="row"><span class="label">金额</span><span class="val" id="amt">—</span></div>
+  <div class="row"><span class="label">套餐</span><span class="val" id="plan">—</span></div>
+  <div class="row"><span class="label">时间</span><span class="val" id="ts">—</span></div>
+  <ul class="features">
+   <li>✅ 无限批量生产（30 集/天无上限）</li>
+   <li>✅ 红果/抖音合规自检（实时过审）</li>
+   <li>✅ 订单中心历史可查</li>
+  </ul>
+  <a class="btn" href="/">进入控制台</a>
+  <p class="hint">如未自动跳转，请点击上方按钮</p>
+ </div>
+ <script>
+  (function(){
+   var sp=new URLSearchParams(location.search);
+   var order_id=sp.get("order_id")||sp.get("out_trade_no")||"—";
+   var amount=sp.get("amount")||sp.get("total_fee")||"—";
+   var plan=sp.get("plan")||"pro";
+   var ts=sp.get("timestamp")||new Date().toLocaleString("zh-CN");
+   document.getElementById("oid").textContent=order_id;
+   document.getElementById("amt").textContent=amount==="—"?amount:"¥"+(parseInt(amount)/100);
+   document.getElementById("plan").textContent=plan.charAt(0).toUpperCase()+plan.slice(1);
+   document.getElementById("ts").textContent=ts;
+  })();
+ </script>
+</body>
+</html>
