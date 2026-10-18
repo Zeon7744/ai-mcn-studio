@@ -5,8 +5,7 @@ AI MCN Studio P0 整改验收测试
 验证项：
 1. batch_producer.py — 输入 IP → 输出 30 集大纲（可下载）
 2. compliance_checker.py — 红果/抖音 ≥5 条规则，通过/不通过 + 原因 + 建议
-3. hupipay_gateway.py — 网关骨架可用，query_callback 主动查单
-4. paywall.py — 付费门 + Hupipay 集成
+3. paywall.py — 付费门（配额闸门 + 收款闭环，已移除虎皮椒）
 """
 import sys
 import os
@@ -139,76 +138,43 @@ def test_compliance_checker():
     return all_ok
 
 
-def test_hupipay_gateway():
-    print("\n=== 3. hupipay_gateway.py ===")
-    all_ok = True
-
-    from mcn_studio.hupipay_gateway import HupipayGateway, get_hupipay_gateway, create_pro_order, query_order
-
-    # 3a 网关实例化
-    g = get_hupipay_gateway()
-    ok = _check("HupipayGateway 实例化", isinstance(g, HupipayGateway))
-    all_ok &= ok
-
-    # 3b 创建订单（密钥未配 → 占位）
-    order = g.create_order("test_user", 9900, "ai-mcn-studio-pro", "pro_monthly")
-    ok = _check("create_order 返回 order_id", bool(order.get("order_id")))
-    all_ok &= ok
-    ok = _check("create_order 含 gateway=hupipay", order.get("gateway") == "hupipay")
-    all_ok &= ok
-    ok = _check("create_order 含 amount_cents=9900", order.get("amount_cents") == 9900)
-    all_ok &= ok
-
-    # 3c 主动查单（密钥未配 → pending_key）
-    q = g.query_callback(order.get("order_id", "test_oid"))
-    ok = _check("query_callback 返回 paid 字段", "paid" in q)
-    all_ok &= ok
-
-    # 3d 便捷入口 create_pro_order
-    order2 = create_pro_order("demo_user")
-    ok = _check("create_pro_order 便捷入口", order2.get("amount_cents") == 9900)
-    all_ok &= ok
-
-    # 3e 退款接口存在
-    ref = g.refund(order.get("order_id", "test_oid"), 9900, "用户申请")
-    ok = _check("refund 接口可用", "order_id" in ref and "ok" in ref)
-    all_ok &= ok
-
-    return all_ok
-
-
 def test_paywall_integration():
-    print("\n=== 4. paywall.py + Hupipay 集成 ===")
+    print("\n=== 3. paywall.py（已移除虎皮椒，切换爱收钱/爱发电网关）===")
     all_ok = True
 
     import paywall
 
-    # 4a 基本配额闸门逻辑不变
+    # 3a 基本配额闸门逻辑不变
     r = paywall.produce_episodes(["a", "b", "c", "d", "e"], used_today=2, is_pro=False)
     ok = _check("配额闸门：剩1条", r["produced"] == 1 and r["hit_free_quota"])
     all_ok &= ok
 
-    # 4b Pro 用户不限量
+    # 3b Pro 用户不限量
     r2 = paywall.produce_episodes(["a", "b", "c", "d", "e"], used_today=0, is_pro=True)
     ok = _check("Pro 用户不限量", r2["produced"] == 5 and not r2["hit_free_quota"])
     all_ok &= ok
 
-    # 4c 集成 Hupipay create_pro_order
+    # 3c 升级 CTA 不含虎皮椒
+    cta = paywall.build_upgrade_cta(3)
+    ok = _check("CTA 不含虎皮椒/hupipay", "虎皮椒" not in cta.lower() and "hupipay" not in cta.lower())
+    all_ok &= ok
+
+    # 3d create_pro_order 返回占位订单
     order = paywall.create_pro_order("test_user_001")
     ok = _check("create_pro_order 返回 order_id", bool(order.get("order_id")))
     all_ok &= ok
     ok = _check("create_pro_order 金额正确", order.get("amount_cents") == 9900)
     all_ok &= ok
-    ok = _check("create_pro_order 网关=hupipay", order.get("gateway") == "hupipay")
+    ok = _check("create_pro_order 网关非 hupipay", order.get("gateway") != "hupipay")
     all_ok &= ok
 
-    # 4d query_order_status
+    # 3e query_order_status
     oid = order.get("order_id", "test")
     status = paywall.query_order_status(oid)
-    ok = _check("query_order_status 返回 paid", "paid" in status)
+    ok = _check("query_order_status 返回 paid 字段", "paid" in status)
     all_ok &= ok
 
-    # 4e activate_pro_benefit
+    # 3f activate_pro_benefit
     benefit = paywall.activate_pro_benefit("test_user_001")
     ok = _check("activate_pro_benefit 返回 pro=True", benefit.get("pro") is True)
     all_ok &= ok
@@ -226,7 +192,6 @@ def main():
     results = {
         "batch_producer": test_batch_producer(),
         "compliance_checker": test_compliance_checker(),
-        "hupipay_gateway": test_hupipay_gateway(),
         "paywall_integration": test_paywall_integration(),
     }
 
