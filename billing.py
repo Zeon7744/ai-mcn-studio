@@ -24,11 +24,21 @@ BUILTIN_REGISTRY = {}
 
 
 def _secret(*names):
-    """优先AI_MCN_前缀，其次JZ_SAAS_前缀。"""
+    """从环境变量取密钥，优先AI_MCN_前缀，其次JZ_SAAS_前缀，最后原样名。"""
     for n in names:
-        v = os.environ.get(f"AI_MCN_{n}") or os.environ.get(f"JZ_SAAS_{n}")
-        if v:
-            return v
+        # n可能是完整名如"JZ_SAAS_AFDIAN_TOKEN"，也可能是短名如"AFDIAN_TOKEN"
+        # 尝试多种组合
+        candidates = [
+            f"AI_MCN_{n}",   # AI_MCN_JZ_SAAS_AFDIAN_TOKEN（如果n已含前缀则跳过）
+            f"JZ_SAAS_{n}",  # JZ_SAAS_JZ_SAAS_AFDIAN_TOKEN（同上）
+            n,               # 原样
+            # 如果n以JZ_SAAS_开头，去掉前缀再试AI_MCN_
+            n.replace("JZ_SAAS_", "AI_MCN_") if n.startswith("JZ_SAAS_") else n,
+        ]
+        for c in candidates:
+            v = os.environ.get(c)
+            if v:
+                return v
     return None
 
 
