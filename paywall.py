@@ -102,10 +102,13 @@ def create_pro_order(user_id: str) -> dict:
     密钥未配时返回占位订单，便于 MVP 演示。
     """
     try:
-        # 优先尝试 jianzhu-saas billing 模块（已合并的企业版）
+        # 优先使用本仓 billing.py（已内嵌爱发电/爱收钱/微信商户网关）
         import importlib
-        billing = importlib.import_module("billing")
-        gateway_cls = billing._registries.get(_BILLING_GATEWAY)
+        try:
+            billing = importlib.import_module("billing")
+        except ImportError:
+            billing = None
+        gateway_cls = billing._registries.get(_BILLING_GATEWAY) if billing else None
         if gateway_cls:
             g = gateway_cls()
             return g.create_order(
@@ -136,8 +139,11 @@ def query_order_status(order_id: str) -> dict:
     """主动查单。"""
     try:
         import importlib
-        billing = importlib.import_module("billing")
-        gateway_cls = billing._registries.get(_BILLING_GATEWAY)
+        try:
+            billing = importlib.import_module("billing")
+        except ImportError:
+            billing = None
+        gateway_cls = billing._registries.get(_BILLING_GATEWAY) if billing else None
         if gateway_cls:
             g = gateway_cls()
             return g.query_callback(order_id)
