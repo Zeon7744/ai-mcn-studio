@@ -24,8 +24,9 @@ BUILTIN_REGISTRY = {}
 
 
 def _secret(*names):
+    """优先AI_MCN_前缀，其次JZ_SAAS_前缀。"""
     for n in names:
-        v = os.environ.get(n)
+        v = os.environ.get(f"AI_MCN_{n}") or os.environ.get(f"JZ_SAAS_{n}")
         if v:
             return v
     return None
@@ -216,10 +217,10 @@ class AfdianGateway(Gateway):
 
     def _cred(self):
         return {
-            "user_id": os.environ.get("JZ_SAAS_AFDIAN_USER", ""),
+            "user_id": os.environ.get("AI_MCN_AFDIAN_USER_ID") or os.environ.get("JZ_SAAS_AFDIAN_USER", ""),
             "token": _secret("JZ_SAAS_AFDIAN_TOKEN"),
-            "base": os.environ.get("JZ_SAAS_AFDIAN_BASE", self.DEFAULT_BASE),
-            "return_url": os.environ.get("JZ_SAAS_AFDIAN_RETURN", ""),
+            "base": os.environ.get("AFDIAN_BASE", os.environ.get("JZ_SAAS_AFDIAN_BASE", self.DEFAULT_BASE)),
+            "return_url": os.environ.get("AFDIAN_RETURN", os.environ.get("JZ_SAAS_AFDIAN_RETURN", "")),
         }
 
     def _post(self, path: str, payload: dict):
@@ -256,7 +257,7 @@ class AfdianGateway(Gateway):
                 "plan": plan,
                 "product": product,
                 "gateway": "afdian",
-                "needs_secret": [f"JZ_SAAS_AFDIAN_{k.upper()}" for k in missing],
+                "needs_secret": [f"AFDIAN_{k.upper()}_ID" if k == "user_id" else f"AFDIAN_{k.upper()}" for k in missing],
                 "note": "user_id/token 未配，无法真实下单",
                 "meta": order_meta or {},
             }
