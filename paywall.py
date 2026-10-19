@@ -108,7 +108,7 @@ def create_pro_order(user_id: str) -> dict:
             billing = importlib.import_module("billing")
         except ImportError:
             billing = None
-        gateway_cls = billing._registries.get(_BILLING_GATEWAY) if billing else None
+        gateway_cls = billing.BUILTIN_REGISTRY.get(_BILLING_GATEWAY) if billing else None
         if gateway_cls:
             g = gateway_cls()
             return g.create_order(
@@ -143,7 +143,7 @@ def query_order_status(order_id: str) -> dict:
             billing = importlib.import_module("billing")
         except ImportError:
             billing = None
-        gateway_cls = billing._registries.get(_BILLING_GATEWAY) if billing else None
+        gateway_cls = billing.BUILTIN_REGISTRY.get(_BILLING_GATEWAY) if billing else None
         if gateway_cls:
             g = gateway_cls()
             return g.query_callback(order_id)
