@@ -381,7 +381,7 @@ register_gateway(AfdianGateway)
 
 def get_gateway(name: str = None) -> Gateway:
     """按名字取网关；缺省读环境变量 JZ_SAAS_BILLING_GATEWAY，未设置回退 noop。"""
-    name = name or os.environ.get("JZ_SAAS_BILLING_GATEWAY", "noop")
+    name = name or os.environ.get("AI_MCN_BILLING_GATEWAY") or os.environ.get("JZ_SAAS_BILLING_GATEWAY", "noop")
     cls = BUILTIN_REGISTRY.get(name, NoopGateway)
     return cls()
 
