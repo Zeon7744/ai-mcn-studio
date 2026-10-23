@@ -14,6 +14,10 @@ from datetime import datetime
 PROJECT_ROOT = Path(__file__).parent.resolve()
 sys.path.insert(0, str(PROJECT_ROOT))
 
+# 有偿授权门控：免费版 3 条/天，超限触发 Pro CTA（接 paywall.check_free_quota）
+from paywall import check_free_quota, build_upgrade_cta
+
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(name)s] %(message)s",
@@ -307,3 +311,8 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+def gate_access(used_today=0, is_pro=False):
+    """有偿授权门控：免费 3 条/天，Pro 不限"""
+    return check_free_quota(used_today, is_pro)
