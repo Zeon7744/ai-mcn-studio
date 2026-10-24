@@ -390,6 +390,69 @@ register_gateway(AfdianGateway)
 
 
 
+# ─────────────────────────── 统一门控（对齐其他 7 仓 billing.check_access 签名）───────────────────────────
+_AFDIAN = "Zeon7744"
+PAYWALL_RULES = {
+    "free":       {"daily_limit": 3,  "label": "免费版（3 条/天）"},
+    "pro":        {"daily_limit": -1, "label": "Pro ¥99/月"},
+    "team":       {"daily_limit": -1, "label": "Team ¥399/月"},
+    "enterprise": {"daily_limit": -1, "label": "企业版 定制"},
+}
+_STATE = {"date": "", "count": 0}
+
+
+def _today():
+    import time as _t
+    return _t.strftime("%Y-%m-%d")
+
+
+def check_access(plan: str = "free", action: str = "use", tenant_id: str = "") -> dict:
+    """统一门控代理：内部走 paywall 配额逻辑，返回与其他 7 仓一致的
+    {"allowed","remaining","reason","upgrade_url"} 结构。
+
+    行为契约（与 paywall.check_free_quota 对齐）：
+      - Pro/team/enterprise 不限（remaining=-1）
+      - 免费版 daily_limit=3，超限 → allowed=False + upgrade_url（http_status 402）
+      - 免费额度内正常放行并计入 _STATE（"免费版拉满"可演示）
+    注：paywall.check_free_quota 的原行为（返回剩余额度/抛 QuotaExceededError）不变，
+    现有 import paywall 调用点不受影响。
+    """
+    from paywall import QuotaExceededError  # 复用原异常类，行为对齐
+    rules = PAYWALL_RULES.get(plan, PAYWALL_RULES["free"])
+    limit = rules["daily_limit"]
+    if limit < 0:
+        return {"allowed": True, "remaining": -1, "reason": "", "plan": plan}
+    if _STATE["date"] != _today():
+        _STATE["date"] = _today()
+        _STATE["count"] = 0
+    if _STATE["count"] >= limit:
+        return {
+            "allowed": False,
+            "remaining": 0,
+            "reason": f"免费版每日 {limit} 条已用完，请升级 Pro（¥99/月 不限条数）",
+            "upgrade_url": f"https://afdian.net/@{_AFDIAN}",
+            "http_status": 402,
+            "plan": plan,
+        }
+    _STATE["count"] += 1
+    return {
+        "allowed": True,
+        "remaining": limit - _STATE["count"],
+        "reason": "",
+        "upgrade_url": "",
+        "plan": plan,
+    }
+
+
+def get_pricing() -> list:
+    """返回定价列表，供 UI / README 对齐（其他 7 仓同名函数）。"""
+    return [
+        {"plan": p, "price": int(PAYWALL_RULES[p].get("price_cents", 0)),
+         "label": r["label"], "daily_limit": r["daily_limit"]}
+        for p, r in PAYWALL_RULES.items()
+    ]
+
+
 def get_gateway(name: str = None) -> Gateway:
     """按名字取网关；缺省读环境变量 JZ_SAAS_BILLING_GATEWAY，未设置回退 noop。"""
     name = name or os.environ.get("AI_MCN_BILLING_GATEWAY") or os.environ.get("JZ_SAAS_BILLING_GATEWAY", "noop")

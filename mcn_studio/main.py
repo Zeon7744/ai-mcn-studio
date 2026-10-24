@@ -314,5 +314,14 @@ if __name__ == "__main__":
 
 
 def gate_access(used_today=0, is_pro=False):
-    """有偿授权门控：免费 3 条/天，Pro 不限"""
+    """有偿授权门控：免费 3 条/天，Pro 不限（原 paywall 路径，行为不变）"""
     return check_free_quota(used_today, is_pro)
+
+
+def gate_access_unified(plan="free", action="use", tenant_id=""):
+    """统一门控入口：走 billing.check_access 代理（与其他 7 仓 billing 签名一致，
+    返回 {"allowed","remaining","reason","upgrade_url"}）。
+    两个入口并存：gate_access 保持原 paywall 行为（超限抛 QuotaExceededError），
+    gate_access_unified 为结构化返回，供 API/前端消费。"""
+    import billing
+    return billing.check_access(plan=plan, action=action, tenant_id=tenant_id)
