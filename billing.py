@@ -6,8 +6,8 @@
   - NoopGateway       : MVP 占位，不扣款
   - WxPayGateway      : 微信商户（企业主体，JSAPI/H5 下单 + 回调验签 + 退款）
   - AishouqianGateway : 爱收钱聚合（MVP 门槛最低，二维码收银台）
-  - AfdianGateway     : 爱发电（个人创作者 10 分钟开通，API 查订单 + Webhook 回调，无需备案域名）
-选择：环境变量 JZ_SAAS_BILLING_GATEWAY=noop|wepay|aishouqian|afdian（缺省 noop）
+  - MbdGateway        : 面包多 Pay（个人可实名收款，支付宝即时/微信次日到卡；费率 2%+0.1 元/笔，以开通页为准）
+选择：环境变量 JZ_SAAS_BILLING_GATEWAY=noop|wepay|aishouqian|mbd（缺省 mbd）
 所有密钥走环境变量，不落代码。
 """
 import os
@@ -26,11 +26,11 @@ BUILTIN_REGISTRY = {}
 def _secret(*names):
     """从环境变量取密钥，优先AI_MCN_前缀，其次JZ_SAAS_前缀，最后原样名。"""
     for n in names:
-        # n可能是完整名如"JZ_SAAS_AFDIAN_TOKEN"，也可能是短名如"AFDIAN_TOKEN"
+
         # 尝试多种组合
         candidates = [
-            f"AI_MCN_{n}",   # AI_MCN_JZ_SAAS_AFDIAN_TOKEN（如果n已含前缀则跳过）
-            f"JZ_SAAS_{n}",  # JZ_SAAS_JZ_SAAS_AFDIAN_TOKEN（同上）
+            f"AI_MCN_{n}",   # 若 n 已含前缀（如 MBD_API_KEY）则跳过
+            f"JZ_SAAS_{n}",  # （同上）
             n,               # 原样
             # 如果n以JZ_SAAS_开头，去掉前缀再试AI_MCN_
             n.replace("JZ_SAAS_", "AI_MCN_") if n.startswith("JZ_SAAS_") else n,
@@ -206,192 +206,7 @@ class AishouqianGateway(Gateway):
         return {"order_id": order_id, "ok": bool(c.get("mch_no")), "refunded_cents": amount_cents, "reason": reason, "gateway": "aishouqian"}
 
 
-class AfdianGateway(Gateway):
-    """
-    爱发电真实网关（个人/团队均可开通，token 鉴权，无域名强制要求）。
-    API 文档：https://afdian.com/api-doc
-    开通：注册 afdian.com → 个人开发者 → 控制台「API token」生成 token
-
-    环境变量：
-      JZ_SAAS_AFDIAN_USER        爱发电 user_id（公开展示名，可入库）
-      JZ_SAAS_AFDIAN_TOKEN       爱发电 API token（敏感，必须 env 注入，不入库）
-      JZ_SAAS_AFDIAN_RETURN      支付成功跳转地址（完整 https URL，建议 Zeon7744.github.io/jianzhu-saas/hpj/success）
-      JZ_SAAS_AFDIAN_BASE        爱发电 API 基址（默认 https://afdian.com/api）
-
-    鉴权方式：请求体带 token 字段（非 MD5 签名），爱发电按 token 验证。
-    """
-
-    name = "afdian"
-
-    DEFAULT_BASE = "https://afdian.com/api"
-
-    def _cred(self):
-        return {
-            "user_id": os.environ.get("AI_MCN_AFDIAN_USER_ID") or os.environ.get("JZ_SAAS_AFDIAN_USER", ""),
-            "token": _secret("JZ_SAAS_AFDIAN_TOKEN"),
-            "base": os.environ.get("AFDIAN_BASE", os.environ.get("JZ_SAAS_AFDIAN_BASE", self.DEFAULT_BASE)),
-            "return_url": os.environ.get("AFDIAN_RETURN", os.environ.get("JZ_SAAS_AFDIAN_RETURN", "")),
-        }
-
-    def _post(self, path: str, payload: dict):
-        """POST 到爱发电 API，token 放请求体，返回解析后的 dict。"""
-        c = self._cred()
-        body = dict(payload)
-        if c.get("token"):
-            body["token"] = c["token"]
-        req = urllib.request.Request(
-            f"{c['base']}{path}",
-            data=json.dumps(body).encode("utf-8"),
-            headers={"Content-Type": "application/json"},
-            method="POST",
-        )
-        with urllib.request.urlopen(req, timeout=30) as resp:
-            return json.loads(resp.read().decode("utf-8"))
-
-    def _missing(self, c: dict):
-        return [k for k in ("user_id", "token") if not c.get(k)]
-
-    def create_order(self, tenant_id, amount_cents, product, plan, order_meta=None):
-        """
-        真实下单：调爱发电 API 获取支付链接。
-        金额单位：爱发电要求"元"（两位小数 decimal），内部统一为"分"。
-        """
-        c = self._cred()
-        missing = self._missing(c)
-        if missing:
-            oid = "afdian_" + str(uuid.uuid4())[:12]
-            return {
-                "order_id": oid,
-                "status": "created_pending_key",
-                "amount_cents": amount_cents,
-                "plan": plan,
-                "product": product,
-                "gateway": "afdian",
-                "needs_secret": [f"AFDIAN_{k.upper()}_ID" if k == "user_id" else f"AFDIAN_{k.upper()}" for k in missing],
-                "note": "user_id/token 未配，无法真实下单",
-                "meta": order_meta or {},
-            }
-
-        # 金额转换：分 → 元（爱发电要求元，两位小数）
-        price = round(amount_cents / 100.0, 2)
-        out_trade_no = "jz_" + str(uuid.uuid4())[:16]
-        payload = {
-            "user_id": c["user_id"],
-            "price": str(price),
-            "name": f"{product}({plan})"[:42],
-            "out_trade_no": out_trade_no,
-        }
-        if c.get("return_url"):
-            payload["return_url"] = c["return_url"]
-        if order_meta:
-            payload["attach"] = json.dumps(order_meta, ensure_ascii=False)
-
-        try:
-            result = self._post("/payment/create", payload)
-        except Exception as e:
-            return {
-                "order_id": out_trade_no,
-                "status": "gateway_error",
-                "amount_cents": amount_cents,
-                "plan": plan,
-                "product": product,
-                "gateway": "afdian",
-                "error": str(e),
-                "ts": int(time.time()),
-                "meta": order_meta or {},
-            }
-
-        code = result.get("code", -1)
-        if code != 0:
-            return {
-                "order_id": out_trade_no,
-                "status": "gateway_rejected",
-                "amount_cents": amount_cents,
-                "plan": plan,
-                "product": product,
-                "gateway": "afdian",
-                "code": code,
-                "msg": result.get("message", ""),
-                "ts": int(time.time()),
-                "meta": order_meta or {},
-            }
-
-        data = result.get("data", {})
-        return {
-            "order_id": out_trade_no,
-            "status": "created",
-            "amount_cents": amount_cents,
-            "plan": plan,
-            "product": product,
-            "gateway": "afdian",
-            "pay_url": data.get("url", ""),
-            "qrcode_url": data.get("qrcode_url", ""),
-            "out_trade_no": out_trade_no,
-            "ts": int(time.time()),
-            "meta": order_meta or {},
-        }
-
-    def query_callback(self, order_id):
-        """爱发电订单查询：按 out_trade_no 主动查询。"""
-        c = self._cred()
-        missing = self._missing(c)
-        if missing:
-            return {"order_id": order_id, "status": "pending_key", "paid": False, "note": "user_id/token 未配"}
-        payload = {"user_id": c["user_id"], "out_trade_no": order_id}
-        try:
-            result = self._post("/payment/query", payload)
-            code = result.get("code", -1)
-            if code != 0:
-                return {"order_id": order_id, "status": "query_error", "paid": False, "gateway": "afdian", "code": code, "msg": result.get("message", "")}
-            data = result.get("data", {})
-            paid = data.get("status") in ("paid", "success")
-            return {"order_id": order_id, "status": data.get("status", "unknown"), "paid": paid, "gateway": "afdian"}
-        except Exception as e:
-            return {"order_id": order_id, "status": "query_failed", "paid": False, "error": str(e), "gateway": "afdian"}
-
-    def verify_callback(self, payload: dict) -> bool:
-        """验证爱发电异步回调：按回调 token 匹配当前配置的 token。"""
-        c = self._cred()
-        if not c.get("token"):
-            return False
-        return payload.get("token") == c["token"]
-
-    def refund(self, order_id, amount_cents, reason=""):
-        """爱发电退款。"""
-        c = self._cred()
-        missing = self._missing(c)
-        if missing:
-            return {"order_id": order_id, "ok": False, "note": "user_id/token 未配", "gateway": "afdian"}
-        price = round(amount_cents / 100.0, 2)
-        payload = {"user_id": c["user_id"], "out_trade_no": order_id, "price": str(price)}
-        if reason:
-            payload["reason"] = reason
-        try:
-            result = self._post("/payment/refund", payload)
-            ok = result.get("code", -1) == 0
-            return {
-                "order_id": order_id,
-                "ok": ok,
-                "refunded_cents": amount_cents if ok else 0,
-                "reason": reason,
-                "gateway": "afdian",
-                "code": result.get("code"),
-                "msg": result.get("message", ""),
-            }
-        except Exception as e:
-            return {"order_id": order_id, "ok": False, "error": str(e), "gateway": "afdian"}
-
-
-register_gateway(NoopGateway)
-register_gateway(WxPayGateway)
-register_gateway(AishouqianGateway)
-register_gateway(AfdianGateway)
-
-
-
-
 # ─────────────────────────── 统一门控（对齐其他 7 仓 billing.check_access 签名）───────────────────────────
-_AFDIAN = "Zeon7744"
 PAYWALL_RULES = {
     "free":       {"daily_limit": 3,  "label": "免费版（3 条/天）"},
     "pro":        {"daily_limit": -1, "label": "Pro ¥99/月"},
@@ -430,7 +245,7 @@ def check_access(plan: str = "free", action: str = "use", tenant_id: str = "") -
             "allowed": False,
             "remaining": 0,
             "reason": f"免费版每日 {limit} 条已用完，请升级 Pro（¥99/月 不限条数）",
-            "upgrade_url": f"https://afdian.net/@{_AFDIAN}",
+            "upgrade_url": "https://mbd.pub/@Zeon7744",
             "http_status": 402,
             "plan": plan,
         }
@@ -453,9 +268,151 @@ def get_pricing() -> list:
     ]
 
 
+class MbdGateway(Gateway):
+    """
+    面包多 Pay 真实网关（个人可实名收款：支付宝即时 5 分钟内到账，微信次日到卡）。
+    官方文档 https://doc.mbd.pub/ ；费率 2% + 0.1 元/笔（<0.5 元免收），以开通页为准。
+
+    环境变量（敏感，env 注入不入库）：
+      MBD_APP_ID      面包多控制台 app_id
+      MBD_API_KEY     面包多 app_key（签名用，= 面包多"开发者 key"）
+      MBD_GATEWAY_URL API 基址（默认 https://newapi.mbd.pub/release）
+      MBD_WEBHOOK_URL 控制台 Webhook 异步通知 URL（charge_succeeded / complaint）
+      MBD_PAY_CHANNEL alipay（默认）| wx_h5（需控制台先过 H5 域名审核）
+
+    签名：MD5(ASCII 字典序 k=v&... + &key=app_key)（doc.mbd.pub/api/qian-ming-suan-fa）
+    未配凭据时降级：created_pending_key + needs_secret（不发真实请求）。
+    """
+
+    name = "mbd"
+    DEFAULT_BASE = "https://newapi.mbd.pub/release"
+
+    def _cred(self):
+        return {
+            "app_id": os.environ.get("MBD_APP_ID", ""),
+            "api_key": _secret("MBD_API_KEY"),
+            "base": os.environ.get("MBD_GATEWAY_URL", self.DEFAULT_BASE),
+            "webhook": os.environ.get("MBD_WEBHOOK_URL", ""),
+            "channel": os.environ.get("MBD_PAY_CHANNEL", "alipay"),
+        }
+
+    @staticmethod
+    def _mbd_sign(data: dict, api_key: str) -> str:
+        ordered = {k: v for k, v in sorted(data.items()) if v not in ("", None)}
+        s = "&".join(f"{k}={v}" for k, v in ordered.items())
+        return hashlib.md5((s + "&key=" + api_key).encode("utf-8")).hexdigest()
+
+    def _post(self, path: str, payload: dict):
+        c = self._cred()
+        body = dict(payload)
+        body["app_id"] = c["app_id"]
+        body["sign"] = self._mbd_sign(body, c["api_key"])
+        req = urllib.request.Request(
+            f"{c['base']}{path}",
+            data=json.dumps(body).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            return json.loads(resp.read().decode("utf-8"))
+
+    def _missing(self, c: dict):
+        return [k for k in ("MBD_APP_ID", "MBD_API_KEY") if not c.get({"MBD_APP_ID": "app_id", "MBD_API_KEY": "api_key"}[k])]
+
+    def create_order(self, tenant_id, amount_cents, product, plan, order_meta=None):
+        """面包多 Pay 下单：amount_total 单位=分；支付宝→pay_body（前端唤起），微信 H5→h5_url。"""
+        c = self._cred()
+        missing = self._missing(c)
+        if missing:
+            oid = "mbd_" + str(uuid.uuid4())[:12]
+            return {
+                "order_id": oid,
+                "status": "created_pending_key",
+                "amount_cents": amount_cents,
+                "plan": plan,
+                "product": product,
+                "gateway": "mbd",
+                "needs_secret": missing,
+                "note": "面包多 Pay 未开通：注册 mbd.pub → 闪电结算 → 控制台取 app_id/app_key → 填 MBD_APP_ID + MBD_API_KEY 即可真下单",
+                "ts": int(time.time()),
+                "meta": order_meta or {},
+            }
+        out_trade_no = "mbd_" + str(uuid.uuid4())[:16]
+        payload = {
+            "description": f"{product}({plan})"[:42],
+            "amount_total": int(amount_cents),
+            "out_trade_no": out_trade_no,
+        }
+        path = "/wx/prepay" if c["channel"] == "wx_h5" else "/alipay/pay"
+        if c["channel"] == "wx_h5":
+            payload["channel"] = "h5"
+        try:
+            result = self._post(path, payload)
+        except Exception as e:
+            return {"order_id": out_trade_no, "status": "gateway_error", "amount_cents": amount_cents,
+                    "plan": plan, "product": product, "gateway": "mbd", "error": str(e),
+                    "ts": int(time.time()), "meta": order_meta or {}}
+        if "error" in result:
+            return {"order_id": out_trade_no, "status": "gateway_rejected", "amount_cents": amount_cents,
+                    "plan": plan, "product": product, "gateway": "mbd", "error": result["error"],
+                    "ts": int(time.time()), "meta": order_meta or {}}
+        out = {"order_id": out_trade_no, "status": "created", "amount_cents": amount_cents,
+               "plan": plan, "product": product, "gateway": "mbd", "ts": int(time.time()),
+               "meta": order_meta or {}}
+        out["h5_url" if c["channel"] == "wx_h5" else "pay_body"] = result.get("h5_url" if c["channel"] == "wx_h5" else "body", "")
+        return out
+
+    def query_callback(self, order_id):
+        """面包多订单查询：POST /search_order（辅助查询；高频状态走 Webhook 异步通知）。"""
+        c = self._cred()
+        if self._missing(c):
+            return {"order_id": order_id, "status": "pending_key", "paid": False,
+                    "needs_secret": self._missing(c), "gateway": "mbd"}
+        payload = {"out_trade_no": order_id}
+        payload["app_id"] = c["app_id"]
+        payload["sign"] = self._mbd_sign(payload, c["api_key"])
+        try:
+            result = self._post("/search_order", payload)
+            if "error" in result:
+                return {"order_id": order_id, "status": "query_error", "paid": False,
+                        "error": result["error"], "gateway": "mbd"}
+            state = str(result.get("state", ""))
+            return {"order_id": order_id, "status": state, "paid": state in ("1", "2"),
+                    "amount_cents": int(result.get("amount", 0)), "gateway": "mbd"}
+        except Exception as e:
+            return {"order_id": order_id, "status": "query_failed", "paid": False,
+                    "error": str(e), "gateway": "mbd"}
+
+    def verify_callback(self, payload: dict) -> bool:
+        """Webhook 异步通知验证：charge_succeeded / complaint，控制台直连 URL + out_trade_no 去重。"""
+        if not isinstance(payload, dict):
+            return False
+        data = payload.get("data") or {}
+        return payload.get("type") in ("charge_succeeded", "complaint") and bool(data.get("out_trade_no"))
+
+    def refund(self, order_id, amount_cents, reason=""):
+        """面包多 Pay 退款：POST /refund（除 API 外，控制台也可直接退款）。"""
+        c = self._cred()
+        if self._missing(c):
+            return {"order_id": order_id, "ok": False, "note": "面包多 Pay 凭据未配",
+                    "needs_secret": self._missing(c), "gateway": "mbd"}
+        payload = {"out_trade_no": order_id, "refund_amount": int(amount_cents or 0)}
+        payload["app_id"] = c["app_id"]
+        payload["sign"] = self._mbd_sign(payload, c["api_key"])
+        try:
+            result = self._post("/refund", payload)
+            ok = "error" not in result
+            return {"order_id": order_id, "ok": ok,
+                    "refunded_cents": amount_cents if ok else 0, "reason": reason, "gateway": "mbd"}
+        except Exception as e:
+            return {"order_id": order_id, "ok": False, "error": str(e), "gateway": "mbd"}
+
+register_gateway(MbdGateway)
+
+
 def get_gateway(name: str = None) -> Gateway:
     """按名字取网关；缺省读环境变量 JZ_SAAS_BILLING_GATEWAY，未设置回退 noop。"""
-    name = name or os.environ.get("AI_MCN_BILLING_GATEWAY") or os.environ.get("JZ_SAAS_BILLING_GATEWAY", "noop")
+    name = name or os.environ.get("AI_MCN_BILLING_GATEWAY") or os.environ.get("JZ_SAAS_BILLING_GATEWAY", "mbd")
     cls = BUILTIN_REGISTRY.get(name, NoopGateway)
     return cls()
 
@@ -497,8 +454,8 @@ def _plan_from_cents(amount_cents):
 def handle_callback(payload):
     """支付平台回调入口：校验后发放/升级套餐。"""
     g = get_gateway()
-    # 爱发电回调带 token，先验签
-    if isinstance(g, AfdianGateway) and g.verify_callback(payload):
+    # 面包多 Webhook（charge_succeeded）：控制台直连 + out_trade_no 去重
+    if isinstance(g, MbdGateway) and g.verify_callback(payload):
         res = g.query_callback(payload.get("out_trade_no", payload.get("order_id", "")))
         if res.get("paid"):
             _grant_benefit(res.get("tenant_id"), res)

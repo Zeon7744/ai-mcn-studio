@@ -19,7 +19,7 @@
 
 - `d96ab6a` ci: 三端全自动镜像（Gitee SSH + GitCode token）
 - `c4c3544` docs(readme): 先体验后付费 + 用户回馈驱动迭代
-- `e5f8083` docs(readme): 统一补「爱发电收款+社区发布」双区块（全仓共存）
+- `e5f8083` docs(readme): 统一补「面包多 Pay收款+社区发布」双区块（全仓共存）
 - `f41e2e3` compliance: 补齐变现合规件 - LICENSE + 商用声明 + 定价规范
 
 ## 维护说明

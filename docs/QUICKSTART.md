@@ -18,5 +18,5 @@ python3 paywall.py
 
 ## 4. 收款与门控
 - 免费 3 条/天；Pro ¥99/月；企业 ¥999/月
-- 爱发电：https://afdian.net/@Zeon7744
+- 面包多 Pay：https://mbd.net/@Zeon7744
 - 冒烟：`bash smoke_test.sh`

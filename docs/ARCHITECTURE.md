@@ -4,7 +4,7 @@
 ```
 ai-mcn-studio/
 ├── paywall.py        # 免费 3 条/天 配额闸门 + 升级 CTA
-├── billing.py        # 收款层：NoopGateway/WxPay/Aishouqian/Afdian 四网关
+├── billing.py        # 收款层：NoopGateway/WxPay/Aishouqian/mbd 四网关
 ├── store.py          # 租户内存存储（匹配 jianzhu-saas 接口）
 ├── index.html        # 变现展示页（hero + 定价 + CTA）
 ├── pricing.md        # 定价档位
