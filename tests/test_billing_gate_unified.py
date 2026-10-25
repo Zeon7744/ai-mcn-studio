@@ -46,7 +46,7 @@ def test_free_quota_then_limit():
     assert r["allowed"] is False
     assert r["remaining"] == 0
     assert r["http_status"] == 402
-    assert "afdian.net" in r["upgrade_url"]
+    assert "mbd.pub" in r["upgrade_url"]
 
 
 def test_paywall_free_quota_contract():

@@ -139,7 +139,7 @@ def test_compliance_checker():
 
 
 def test_paywall_integration():
-    print("\n=== 3. paywall.py（已移除虎皮椒，切换爱收钱/爱发电网关）===")
+    print("\n=== 3. paywall.py（已移除虎皮椒，切换爱收钱/面包多 Pay网关）===")
     all_ok = True
 
     import paywall
