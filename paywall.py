@@ -10,7 +10,7 @@
 
 收款方案：
   主路径：爱收钱（MVP 门槛最低，二维码收银台）
-  备选：爱发电（个人创作者 10 分钟开通，无需备案域名）
+  备选：面包多 Pay（个人创作者 10 分钟开通，无需备案域名）
   生产环境配密钥后启用真实网关；目前返回占位订单便于 MVP 演示。
 
 运行：
@@ -29,7 +29,7 @@ FREE_DAILY_QUOTA = 3
 PRO_PRICE_CNY = 99
 PRO_PRICE_CENTS = PRO_PRICE_CNY * 100  # 9900 分
 
-# 当前默认网关（noop=占位，生产配密钥后改为 aishouqian 或 afdian）
+# 当前默认网关（noop=占位，生产配密钥后改为 aishouqian 或 mbd）
 _BILLING_GATEWAY = os.environ.get("JZ_SAAS_BILLING_GATEWAY", "noop")
 
 
@@ -98,11 +98,11 @@ def produce_episodes(
 def create_pro_order(user_id: str) -> dict:
     """
     创建 ¥99/月 Pro 订阅订单。
-    网关由 JZ_SAAS_BILLING_GATEWAY 环境变量控制（noop|wepay|aishouqian|afdian）。
+    网关由 JZ_SAAS_BILLING_GATEWAY 环境变量控制（noop|wepay|aishouqian|mbd）。
     密钥未配时返回占位订单，便于 MVP 演示。
     """
     try:
-        # 优先使用本仓 billing.py（已内嵌爱发电/爱收钱/微信商户网关）
+        # 优先使用本仓 billing.py（已内嵌面包多 Pay/爱收钱/微信商户网关）
         import importlib
         try:
             billing = importlib.import_module("billing")
@@ -206,4 +206,4 @@ if __name__ == "__main__":
     benefit = activate_pro_benefit("demo_user_001")
     print(f"  权益已激活：{len(benefit['benefits'])} 项")
 
-    print("\n✅ 付费门收款闭环完成（已移除虎皮椒，切换至爱收钱/爱发电网关）")
+    print("\n✅ 付费门收款闭环完成（已移除虎皮椒，切换至爱收钱/面包多 Pay网关）")
